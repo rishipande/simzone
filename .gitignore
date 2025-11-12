@@ -1,6 +1,7 @@
 # Xcode user data
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+*.xcodeproj/*.xcworkspace/xcuserdata
 
 # Derived data and build products
 DerivedData/
