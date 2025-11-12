@@ -1,3 +1,18 @@
+# Xcode user data
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 
+# Derived data and build products
+DerivedData/
+build/
+Build/
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# macOS junk
+.DS_Store
+
+# User-specific settings
+*.xcuserstate
