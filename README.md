@@ -148,6 +148,3 @@ Comments, questions, bugs, and feature requests welcome!
 ## License
 
 Simzone is distributed under the terms of the license found in [`LICENSE`](./LICENSE).
-
-(Replace this line with the specific license name once you’ve chosen one, e.g. “This project is licensed under the Unlicense / MIT License / Apache 2.0 License,” etc.)
-
