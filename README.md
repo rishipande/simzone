@@ -2,13 +2,15 @@
 
 Simzone is a tiny macOS menu bar app that helps you keep track of multiple time zones at a glance.
 
-It sits quietly in your menu bar and shows:
+It sits in your menu bar and shows:
 
 - Your **local time**
 - Up to **five additional time zones**
 - An optional **menu bar time display** (with your own label + emoji)
 
 No accounts. No internet access. Just local Date/Time APIs and a small preferences window.
+
+Learn more on why/how this was written, screenshots, and download the latest build from: [here](https://fryol.net/r/simzone/).
 
 ---
 
