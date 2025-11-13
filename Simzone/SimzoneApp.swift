@@ -17,7 +17,6 @@ struct SimzoneApp: App {
             ContentView()
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                //.fixedSize()
                 .frame(maxWidth: 260, alignment: .topLeading)
         } label: {
             MenuBarLabelView()
@@ -27,15 +26,13 @@ struct SimzoneApp: App {
 }
 
 struct MenuBarLabelView: View {
-    
     @AppStorage("simzoneMenuBarEmoji") private var menuBarEmoji: String = "🌖"
-
-    @AppStorage("simzoneShowTimeInMenuBar") private var showTimeInMenuBar: Bool = true
+    @AppStorage("simzoneShowTimeInMenuBar") private var showTimeInMenuBar: Bool = false
     @AppStorage("simzoneMenuBarShortName") private var menuBarShortName: String = ""
     @AppStorage("simzoneMenuBarTimeZoneId") private var menuBarTimeZoneId: String = "local"
     @AppStorage("simzoneMenuBarFormat") private var menuBarFormat: String = "HH:mm"
 
-    @State private var now: Date = Date()
+    @State private var now = Date()
 
     private let timer = Timer
         .publish(every: 10, on: .main, in: .common)
@@ -64,11 +61,7 @@ struct MenuBarLabelView: View {
         let timeString = formatter.string(from: now)
         let prefix = menuBarShortName.trimmingCharacters(in: .whitespaces)
 
-        if prefix.isEmpty {
-            return timeString
-        } else {
-            return "\(prefix) \(timeString)"
-        }
+        return prefix.isEmpty ? timeString : "\(prefix) \(timeString)"
     }
 
     private var selectedTimeZone: TimeZone {
@@ -78,4 +71,3 @@ struct MenuBarLabelView: View {
         return TimeZone(identifier: menuBarTimeZoneId) ?? .current
     }
 }
-

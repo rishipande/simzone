@@ -7,10 +7,11 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct PreferencesView: View {
     @AppStorage("simzoneDateFormat")
-    private var dateFormat: String = "MM/dd/yy hh:mm a"
+    private var dateFormat: String = "MMM dd EEE hh:mm a"
     
     @State private var exampleNow = Date()
 
@@ -43,34 +44,7 @@ struct PreferencesView: View {
         ("MON DD hh:MM AM/PM",      "MMM dd hh:mm a")
     ]
 
-    private let licenseText: String = """
-    Simzone License: UNLICENSE
-
-    This is free and unencumbered software released into the public domain.
-
-    Anyone is free to copy, modify, publish, use, compile, sell, or
-    distribute this software, either in source code form or as a compiled
-    binary, for any purpose, commercial or non-commercial, and by any
-    means.
-
-    In jurisdictions that recognize copyright laws, the author or authors
-    of this software dedicate any and all copyright interest in the
-    software to the public domain. We make this dedication for the benefit
-    of the public at large and to the detriment of our heirs and
-    successors. We intend this dedication to be an overt act of
-    relinquishment in perpetuity of all present and future rights to this
-    software under copyright law.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-    OTHER DEALINGS IN THE SOFTWARE.
-
-    For more information, please refer to <https://unlicense.org/>
-    """
+    @State private var licenseText: String = ""
 
     @AppStorage("simzoneLocation1") private var loc1: String = ""
     @AppStorage("simzoneLocation2") private var loc2: String = ""
@@ -84,18 +58,19 @@ struct PreferencesView: View {
     @AppStorage("simzoneLocation4Name") private var loc4Name: String = ""
     @AppStorage("simzoneLocation5Name") private var loc5Name: String = ""
     
-    @AppStorage("simzoneShowTimeInMenuBar") private var showTimeInMenuBar: Bool = true
+    @AppStorage("simzoneShowTimeInMenuBar") private var showTimeInMenuBar: Bool = false
     @AppStorage("simzoneMenuBarShortName") private var menuBarShortName: String = ""
     @AppStorage("simzoneMenuBarTimeZoneId") private var menuBarTimeZoneId: String = "local"
     @AppStorage("simzoneMenuBarFormat") private var menuBarFormat: String = "HH:mm"
-    @AppStorage("simzoneMenuBarEmoji") private var menuBarEmoji: String = "🌓"
+    @AppStorage("simzoneMenuBarEmoji") private var menuBarEmoji: String = "🌖"
 
-    @State private var emojiPickerSelection: String = "🌓"
+    @State private var emojiPickerSelection: String = "🌖"
     @State private var showEmojiInfo = false
 
     private let menuBarEmojiOptions: [String] = [
-        "🚀", "🌐", "🏢", "🏠", "🗽", "♨️", "🌓"
+        "🚀", "🌐", "🏢", "🏠", "🗽", "♨️", "🌓", "🌖"
     ]
+    
     private let customEmojiTag = "custom"
     
     @State private var newTimeZoneId: String = TimeZone.current.identifier
@@ -147,18 +122,9 @@ struct PreferencesView: View {
             let offset = utcOffsetString(for: tz, at: now)
             return ZoneOption(id: id, label: "\(city) (\(offset))")
         }
-        .sorted { lhs, rhs in
-            lhs.label.localizedCaseInsensitiveCompare(rhs.label) == .orderedAscending
-        }
+        .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
     }
 
-    private var exampleText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = dateFormat
-        formatter.timeZone = .current
-        return formatter.string(from: exampleNow)
-    }
-    
     private func addSelectedTimeZone() {
         guard !currentLocationIds.contains(newTimeZoneId) else { return }
         
@@ -313,13 +279,6 @@ struct PreferencesView: View {
             }
         )
     }
-    
-    private func menuBarSampleLabel(for pattern: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = pattern
-        formatter.timeZone = .current
-        return formatter.string(from: exampleNow)
-    }
 
     private var menuBarFormatBinding: Binding<String> {
         Binding(
@@ -363,7 +322,6 @@ struct PreferencesView: View {
         return result
     }
 
-    
     private var appVersionString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
@@ -376,24 +334,16 @@ struct PreferencesView: View {
     var body: some View {
         TabView {
             formatTab
-                .tabItem {
-                Text("Date/Time Format")
-            }
+                .tabItem { Text("Date/Time Format") }
             
             timeZonesTab
-                .tabItem {
-                Text("Time Zones")
-            }
+                .tabItem { Text("Time Zones") }
             
             menuBarTab
-                .tabItem {
-                Text("Menu Bar")
-            }
+                .tabItem { Text("Menu Bar") }
             
             aboutTab
-                .tabItem {
-                Text("About")
-            }
+                .tabItem { Text("About") }
         }
         .padding(20)
         .onAppear {
@@ -408,10 +358,13 @@ struct PreferencesView: View {
             if !menuBarZoneOptions.contains(where: { $0.id == menuBarTimeZoneId }) {
                 menuBarTimeZoneId = "local"
             }
-            if menuBarEmojiOptions.contains(menuBarEmoji) {
-                emojiPickerSelection = menuBarEmoji
+            emojiPickerSelection = menuBarEmojiOptions.contains(menuBarEmoji) ? menuBarEmoji : customEmojiTag
+            
+            if let asset = NSDataAsset(name: "LICENSE"),
+               let text = String(data: asset.data, encoding: .utf8) {
+                licenseText = text
             } else {
-                emojiPickerSelection = customEmojiTag
+                licenseText = "LICENSE file not found in assets."
             }
         }
     }
@@ -420,7 +373,6 @@ struct PreferencesView: View {
     
     private var formatTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-
             Divider()
             
             Text("Use a custom DateFormatter format string.")
@@ -440,7 +392,6 @@ struct PreferencesView: View {
 
     private var timeZonesTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            
             Divider()
 
             Text("Add up to 5 additional time zones to show in Simzone.")
@@ -486,7 +437,6 @@ struct PreferencesView: View {
 
     private var menuBarTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            
             Divider()
             
             HStack(spacing: 8) {
@@ -510,8 +460,8 @@ struct PreferencesView: View {
                         • The menu bar is tight on space—keep it to 1 char.
                         • Some emojis render wider; test a few to see what fits.
                         """)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                         Button("Got it") { showEmojiInfo = false }
                             .keyboardShortcut(.defaultAction)
                             .padding(.top, 6)
@@ -519,13 +469,13 @@ struct PreferencesView: View {
                     .padding(12)
                     .frame(width: 280)
                 }
-
+                
                 Picker("Simzone icon (Emoji Actually)", selection: $emojiPickerSelection) {
                     ForEach(menuBarEmojiOptions, id: \.self) { emoji in
                         Text(emoji)
                             .tag(emoji)
                     }
-                    Divider()
+                    //Divider()
                     Text("Bring Your Own")
                         .tag(customEmojiTag)
                 }
@@ -536,7 +486,7 @@ struct PreferencesView: View {
                         menuBarEmoji = emojiPickerSelection
                     }
                 }
-
+                
                 if emojiPickerSelection == customEmojiTag {
                     TextField("🙂", text: $menuBarEmoji)
                         .textFieldStyle(.roundedBorder)
@@ -550,7 +500,6 @@ struct PreferencesView: View {
 
             // Everything AFTER the toggle gets grayed out & disabled when it's off
             Group {
-                
                 VStack(alignment: .leading, spacing: 4) {
                     Picker("Time zone to show", selection: $menuBarTimeZoneId) {
                         ForEach(menuBarZoneOptions) { option in
@@ -564,7 +513,7 @@ struct PreferencesView: View {
                 HStack(spacing: 8) {
                     Text("Short pre-fix label (optional / 5 char limit)")
 
-                    TextField("e.g. NYC", text: $menuBarShortName)
+                    TextField("e.g. NYC🗽", text: $menuBarShortName)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
                         .onChange(of: menuBarShortName) {
@@ -577,7 +526,7 @@ struct PreferencesView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Picker("Menu Bar Time Format", selection: menuBarFormatBinding) {
                         ForEach(menuBarFormatOptions, id: \.pattern) { option in
-                            Text(menuBarSampleLabel(for: option.pattern))
+                            Text(sampleLabel(for: option.pattern))
                                 .tag(option.pattern)
                         }
                     }
@@ -587,7 +536,7 @@ struct PreferencesView: View {
             }
             .disabled(!showTimeInMenuBar)
             .opacity(showTimeInMenuBar ? 1.0 : 0.5)
-
+        
             Spacer()
         }
     }
@@ -600,7 +549,7 @@ struct PreferencesView: View {
                 .font(.subheadline)
                 .bold()
                         
-            Text("Free and configurable app, but if you like it, please donate at https://oneTreePlanted.org. Comments/questions/bugs/feature-requests welcome at: sphinx-either-jeep@duck.com. See license below.")
+            Text("Free and configurable app, but if you like it, please donate at https://oneTreePlanted.org. Comments, questions, bugs, feature-requests welcome at: https://github.com/rishipande/simzone. See license below.")
                 .font(.callout)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)

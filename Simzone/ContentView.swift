@@ -17,7 +17,6 @@ struct CityTimeZone: Identifiable {
 }
 
 struct ContentView: View {
-    
     @Environment(\.colorScheme) private var colorScheme
 
     // Stored time zones (up to 5) coming from Preferences
@@ -33,10 +32,9 @@ struct ContentView: View {
     @AppStorage("simzoneLocation4Name") private var loc4Name: String = ""
     @AppStorage("simzoneLocation5Name") private var loc5Name: String = ""
 
-    @State private var now: Date = Date()
+    @AppStorage("simzoneDateFormat") private var dateFormat: String = "MMM dd EEE hh:mm a"
     
-    @AppStorage("simzoneDateFormat")
-    private var dateFormat: String = "MM/dd/yy hh:mm a"
+    @State private var now = Date()
     
     private let timer = Timer
         .publish(every: 10, on: .main, in: .common)   // every 10s; no seconds so no flicker
@@ -73,12 +71,7 @@ struct ContentView: View {
     }
     
     private var invertedLabelColor: Color {
-        switch colorScheme {
-        case .dark:
-            return Color.white  // light on dark
-        default:
-            return Color.black  // dark on light
-        }
+        colorScheme == .dark ? .white : .black  // light on dark / dark on light
     }
     
     private func closeMenuBarPopover() {
@@ -87,12 +80,10 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-          
             // Local time
             VStack(alignment: .leading, spacing: 6) {
                 Text("Local Time")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
                     .foregroundColor(.accentColor)
                 
                 Text(formattedDate(for: .current))
@@ -102,7 +93,6 @@ struct ContentView: View {
                     .iBeamCursorOnHover()
             }
 
-            
             // Extra time zones from preferences
             if !selectedTimeZones.isEmpty {
                 Divider()
@@ -129,12 +119,12 @@ struct ContentView: View {
             Divider()
             
             VStack(alignment: .leading) {
-                MenuRow(title: "Settings") {
+                MenuRow(title: "Settings", shortcut: "⌘,") {
                     closeMenuBarPopover()
                     PreferencesWindowController.shared.show()
                 }
 
-                MenuRow(title: "Quit Simzone") {
+                MenuRow(title: "Quit Simzone", shortcut: "⌘Q") {
                     NSApplication.shared.terminate(nil)
                 }
             }
@@ -175,32 +165,40 @@ private struct IBeamOnHoverModifier: ViewModifier {
 
 private extension View {
     func iBeamCursorOnHover() -> some View {
-        self.modifier(IBeamOnHoverModifier())
+        modifier(IBeamOnHoverModifier())
     }
 }
 
 struct MenuRow: View {
     let title: String
+    let shortcut: String?
     let action: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
-        Text(title)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
-            .background(
-                isHovering
-                ? Color.accentColor.opacity(0.12)   // hover highlight
-                : Color.clear
-            )
-            .contentShape(Rectangle())        // full row is clickable
-            .onTapGesture {
-                action()
+        HStack {
+            Text(title)
+            Spacer()
+            if let shortcut {
+                Text(shortcut)
+                    .foregroundStyle(.secondary)
             }
-            .onHover { hovering in
-                isHovering = hovering
-            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 2)
+        .background(
+            isHovering
+            ? Color.accentColor.opacity(0.12)   // hover highlight
+            : Color.clear
+        )
+        .contentShape(Rectangle())        // full row is clickable
+        .onTapGesture {
+            action()
+        }
+        .onHover { hovering in
+            isHovering = hovering
+        }
     }
 }
 
