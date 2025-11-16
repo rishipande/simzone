@@ -63,6 +63,9 @@ struct PreferencesView: View {
     @AppStorage("simzoneMenuBarTimeZoneId") private var menuBarTimeZoneId: String = "local"
     @AppStorage("simzoneMenuBarFormat") private var menuBarFormat: String = "HH:mm"
     @AppStorage("simzoneMenuBarEmoji") private var menuBarEmoji: String = "🌖"
+    @AppStorage("simzoneShowLocalTime") private var showLocalTime: Bool = true
+    @AppStorage("simzoneShowTimeDifferences") private var showTimeDifferences: Bool = true
+    @AppStorage("simzoneShowCopyButtons") private var showCopyButtons: Bool = true
 
     @State private var emojiPickerSelection: String = "🌖"
     @State private var showEmojiInfo = false
@@ -324,8 +327,7 @@ struct PreferencesView: View {
 
     private var appVersionString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-        return "Version \(version) (\(build))"
+        return "Version \(version)"
     }
     
     
@@ -470,7 +472,7 @@ struct PreferencesView: View {
                     .frame(width: 280)
                 }
                 
-                Picker("Simzone icon (Emoji Actually)", selection: $emojiPickerSelection) {
+                Picker("Simzone icon (Emoji)", selection: $emojiPickerSelection) {
                     ForEach(menuBarEmojiOptions, id: \.self) { emoji in
                         Text(emoji)
                             .tag(emoji)
@@ -494,9 +496,11 @@ struct PreferencesView: View {
                         .multilineTextAlignment(.center)
                 }
             }
+            .disabled(showTimeInMenuBar)                // <— disables when toggle ON
+            .opacity(showTimeInMenuBar ? 0.5 : 1.0) 
 
             // Toggle controls whether the rest is active
-            Toggle("Show time in menu bar instead of icon", isOn: $showTimeInMenuBar)
+            Toggle("Show time in menu bar instead of Simzone icon (Emoji)", isOn: $showTimeInMenuBar)
 
             // Everything AFTER the toggle gets grayed out & disabled when it's off
             Group {
@@ -511,7 +515,7 @@ struct PreferencesView: View {
                 }
                 
                 HStack(spacing: 8) {
-                    Text("Short pre-fix label (optional / 5 char limit)")
+                    Text("Short pre-fix label (optional / 5 character limit)")
 
                     TextField("e.g. NYC🗽", text: $menuBarShortName)
                         .textFieldStyle(.roundedBorder)
@@ -538,18 +542,26 @@ struct PreferencesView: View {
             .opacity(showTimeInMenuBar ? 1.0 : 0.5)
         
             Spacer()
+            
+            Divider()
+
+            Toggle("Show local time", isOn: $showLocalTime)
+
+            Toggle("Show time difference vs local (e.g. +3 hrs)", isOn: $showTimeDifferences)
+
+            Toggle("Show copy button next to times", isOn: $showCopyButtons)
+
+            Spacer()
         }
     }
     
     private var aboutTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Divider()
-
             Text("Simzone \(appVersionString)")
                 .font(.subheadline)
                 .bold()
                         
-            Text("Free and configurable app, but if you like it, please donate at https://oneTreePlanted.org. Comments, questions, bugs, feature-requests welcome at: https://github.com/rishipande/simzone. See license below.")
+            Text("Free and configurable app. If you like it, please donate: https://oneTreePlanted.org. Comments, questions, bugs, feature-requests welcome at: https://github.com/rishipande/simzone. See license below.")
                 .font(.callout)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)

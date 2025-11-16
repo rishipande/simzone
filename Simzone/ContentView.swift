@@ -34,6 +34,11 @@ struct ContentView: View {
 
     @AppStorage("simzoneDateFormat") private var dateFormat: String = "MMM dd EEE hh:mm a"
     
+    @AppStorage("simzoneShowLocalTime") private var showLocalTime: Bool = true
+    @AppStorage("simzoneShowTimeDifferences") private var showTimeDifferences: Bool = true
+    @AppStorage("simzoneShowCopyButtons") private var showCopyButtons: Bool = true
+
+    
     @State private var now = Date()
     
     private let timer = Timer
@@ -61,6 +66,35 @@ struct ContentView: View {
         return result
     }
     
+    // calculate time difference - uses the now state so DST and current offsets stay correct
+    private func timeDifferenceString(for timeZone: TimeZone) -> String {
+        let localTZ = TimeZone.current
+        let localSeconds = localTZ.secondsFromGMT(for: now)
+        let otherSeconds = timeZone.secondsFromGMT(for: now)
+        let diffSeconds = otherSeconds - localSeconds
+
+        if diffSeconds == 0 {
+            return "Local"
+        }
+
+        let hours = Double(diffSeconds) / 3600.0
+        let sign = hours > 0 ? "+" : "-"
+        let absHours = abs(hours)
+
+        let hoursText: String
+        if absHours == floor(absHours) {
+            hoursText = String(format: "%.0f", absHours)
+        } else if (absHours * 2).truncatingRemainder(dividingBy: 1) == 0 {
+            // e.g. 3.5 hours
+            hoursText = String(format: "%.1f", absHours)
+        } else {
+            hoursText = String(format: "%.2f", absHours)
+        }
+
+        return "\(sign)\(hoursText) hrs"
+    }
+
+    
     private func customName(for identifier: String) -> String? {
         if identifier == loc1, !loc1Name.isEmpty { return loc1Name }
         if identifier == loc2, !loc2Name.isEmpty { return loc2Name }
@@ -69,6 +103,13 @@ struct ContentView: View {
         if identifier == loc5, !loc5Name.isEmpty { return loc5Name }
         return nil
     }
+    
+    private func copyToClipboard(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+
     
     private var invertedLabelColor: Color {
         colorScheme == .dark ? .white : .black  // light on dark / dark on light
@@ -79,35 +120,84 @@ struct ContentView: View {
     }
 
     var body: some View {
+        
+        
         VStack(alignment: .leading, spacing: 6) {
-            // Local time
+            // first block that shows "Local Time" and then the time
             VStack(alignment: .leading, spacing: 6) {
-                Text("Local Time")
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                
-                Text(formattedDate(for: .current))
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .foregroundStyle(.primary)
-                    .iBeamCursorOnHover()
+                if showLocalTime {
+                    Text("Local Time")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                    
+                    HStack(spacing: 4) {
+                        Text(formattedDate(for: .current))
+                            .font(.body)
+                            .textSelection(.enabled)
+                            .foregroundStyle(.primary)
+                            .iBeamCursorOnHover()
+                        
+                        Spacer()  // pushes the copy button to the right
+                        
+                        // copy button
+                        Button {
+                            let value = formattedDate(for: .current)
+                            copyToClipboard(value)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .imageScale(.small)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Copy to clipboard")
+                    }
+                    Divider()
+                }
             }
 
-            // Extra time zones from preferences
+            // second block that shows extra time zones from preferences
             if !selectedTimeZones.isEmpty {
-                Divider()
-                
                 ForEach(selectedTimeZones) { city in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(city.name)
-                            .font(.subheadline)
-                            .foregroundColor(.accentColor)
+                        // the city
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            let zone = TimeZone(identifier: city.identifier) ?? .current
+
+                            Text(city.name)
+                                .font(.subheadline)
+                                .foregroundColor(.accentColor)
+                            
+                            Spacer()
+                            
+                            if showTimeDifferences {
+                                Text("\(timeDifferenceString(for: zone))")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
                         
-                        Text(formattedDate(for: TimeZone(identifier: city.identifier) ?? .current))
-                            .font(.body)
-                            .foregroundColor(invertedLabelColor)
-                            .textSelection(.enabled)
-                            .iBeamCursorOnHover()
+                        // time/date for the city
+                        HStack(spacing: 4) {
+                            Text(formattedDate(for: TimeZone(identifier: city.identifier) ?? .current))
+                                .font(.body)
+                                .foregroundColor(invertedLabelColor)
+                                .textSelection(.enabled)
+                                .iBeamCursorOnHover()
+                            
+                            Spacer()  // pushes the copy button to the right
+                            
+                            // copy button
+                            if showCopyButtons {
+                                Button {
+                                    let value = formattedDate(for: TimeZone(identifier: city.identifier) ?? .current)
+                                    copyToClipboard(value)
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                        .imageScale(.small)
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Copy to clipboard")
+                            }
+                        }
                     }
                     
                     if city.id != selectedTimeZones.last?.id {
@@ -118,6 +208,7 @@ struct ContentView: View {
             
             Divider()
             
+            // settings and quit buttons
             VStack(alignment: .leading) {
                 MenuRow(title: "Settings", shortcut: "⌘,") {
                     closeMenuBarPopover()
