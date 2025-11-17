@@ -63,7 +63,12 @@ struct PreferencesView: View {
     @AppStorage("simzoneMenuBarTimeZoneId") private var menuBarTimeZoneId: String = "local"
     @AppStorage("simzoneMenuBarFormat") private var menuBarFormat: String = "HH:mm"
     @AppStorage("simzoneMenuBarEmoji") private var menuBarEmoji: String = "🌖"
+    
     @AppStorage("simzoneShowLocalTime") private var showLocalTime: Bool = true
+    @AppStorage("simzoneLocalTimeLabel") private var localTimeLabel: String = "Local Time"
+    
+    @AppStorage("simzoneShowAdjustButtons") private var showAdjustButtons: Bool = true  // 👈 NEW
+
     @AppStorage("simzoneShowTimeDifferences") private var showTimeDifferences: Bool = true
     @AppStorage("simzoneShowCopyButtons") private var showCopyButtons: Bool = true
 
@@ -546,11 +551,31 @@ struct PreferencesView: View {
             Divider()
 
             Toggle("Show local time", isOn: $showLocalTime)
+            
+            HStack(spacing: 8) {
+                Text("Override \"Local time\" text")
+                    .foregroundStyle(.secondary)
+                
+                TextField("Local Time", text: $localTimeLabel)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 160)
+            }
+            .disabled(!showLocalTime)
+            .opacity(showLocalTime ? 1.0 : 0.5)
 
             Toggle("Show time difference vs local (e.g. +3 hrs)", isOn: $showTimeDifferences)
 
             Toggle("Show copy button next to times", isOn: $showCopyButtons)
-
+            
+            Toggle(isOn: $showAdjustButtons) {
+                HStack(spacing: 6) {
+                    Text("Show time adjustment buttons (on hover over times)")
+                    Image(systemName: "minus.circle")
+                    Image(systemName: "plus.circle")
+                    Image(systemName: "arrow.counterclockwise") // "rotate"
+                }
+            }
+            
             Spacer()
         }
     }

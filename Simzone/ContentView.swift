@@ -8,7 +8,6 @@
 
 import SwiftUI
 import Combine
-import AppKit
 
 struct CityTimeZone: Identifiable {
     let id: String          // unique
@@ -35,11 +34,17 @@ struct ContentView: View {
     @AppStorage("simzoneDateFormat") private var dateFormat: String = "MMM dd EEE hh:mm a"
     
     @AppStorage("simzoneShowLocalTime") private var showLocalTime: Bool = true
+    @AppStorage("simzoneLocalTimeLabel") private var localTimeLabel: String = "Local Time"
+    
+    @AppStorage("simzoneShowAdjustButtons") private var showAdjustButtons: Bool = true
+    
     @AppStorage("simzoneShowTimeDifferences") private var showTimeDifferences: Bool = true
     @AppStorage("simzoneShowCopyButtons") private var showCopyButtons: Bool = true
 
     
     @State private var now = Date()
+    @State private var offsetMinutes: Int = 0
+    @State private var hoveredRowID: String? = nil
     
     private let timer = Timer
         .publish(every: 10, on: .main, in: .common)   // every 10s; no seconds so no flicker
@@ -68,9 +73,12 @@ struct ContentView: View {
     
     // calculate time difference - uses the now state so DST and current offsets stay correct
     private func timeDifferenceString(for timeZone: TimeZone) -> String {
+        
+        let adjustedNow = now.addingTimeInterval(TimeInterval(offsetMinutes * 60))
+
         let localTZ = TimeZone.current
-        let localSeconds = localTZ.secondsFromGMT(for: now)
-        let otherSeconds = timeZone.secondsFromGMT(for: now)
+        let localSeconds = localTZ.secondsFromGMT(for: adjustedNow)
+        let otherSeconds = timeZone.secondsFromGMT(for: adjustedNow)
         let diffSeconds = otherSeconds - localSeconds
 
         if diffSeconds == 0 {
@@ -118,38 +126,149 @@ struct ContentView: View {
     private func closeMenuBarPopover() {
         NSApplication.shared.keyWindow?.close()
     }
+    
+    private func clearFirstResponder() {
+        if let window = NSApp.windows.first(where: { $0.isKeyWindow }) {
+            window.makeFirstResponder(nil)
+        }
+    }
+    
+    struct RepeatButton<Label: View>: View {
+        let action: () -> Void
+        let label: () -> Label
+
+        @State private var timer: Timer?
+        @State private var startDate: Date?
+
+        var body: some View {
+            label()
+                // normal click = single action
+                .onTapGesture {
+                    action()
+                }
+                // press & hold = start repeating
+                .onLongPressGesture(
+                    minimumDuration: 0.2,      // 👈 correct label
+                    maximumDistance: 10,
+                    pressing: { isPressing in
+                        if isPressing {
+                            startRepeating()
+                        } else {
+                            stopRepeating()
+                        }
+                    },
+                    perform: {
+                        // nothing needed here; timer is doing the work
+                    }
+                )
+        }
+
+        private func startRepeating() {
+            // fire once immediately on hold
+            action()
+            startDate = Date()
+
+            timer?.invalidate()
+            timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+                let elapsed = Date().timeIntervalSince(startDate ?? Date())
+                let multiplier: Int
+
+                switch elapsed {
+                case 0..<1:
+                    multiplier = 1      // first second: 1x
+                case 1..<2:
+                    multiplier = 2      // next second: 2x
+                default:
+                    multiplier = 4      // after 2s: 4x
+                }
+
+                for _ in 0..<multiplier {
+                    action()
+                }
+            }
+            RunLoop.main.add(timer!, forMode: .common)
+        }
+
+        private func stopRepeating() {
+            timer?.invalidate()
+            timer = nil
+            startDate = nil
+        }
+    }
 
     var body: some View {
-        
-        
         VStack(alignment: .leading, spacing: 6) {
             // first block that shows "Local Time" and then the time
             VStack(alignment: .leading, spacing: 6) {
                 if showLocalTime {
-                    Text("Local Time")
+                    Text(localTimeLabel.isEmpty ? "Local Time" : localTimeLabel)
                         .font(.subheadline)
                         .foregroundColor(.accentColor)
                     
                     HStack(spacing: 4) {
                         Text(formattedDate(for: .current))
                             .font(.body)
-                            .textSelection(.enabled)
                             .foregroundStyle(.primary)
-                            .iBeamCursorOnHover()
                         
                         Spacer()  // pushes the copy button to the right
                         
-                        // copy button
-                        Button {
-                            let value = formattedDate(for: .current)
-                            copyToClipboard(value)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .imageScale(.small)
+                        // time adjustment buttons
+                        if showAdjustButtons {
+                            HStack(spacing: 4) {
+                                // -30 min button // "➖"
+                                RepeatButton() {
+                                    offsetMinutes -= 30
+                                }
+                                label: {
+                                    Image(systemName: "minus.circle") //Text("−") // or Image(systemName: "minus.circle")
+                                }
+                                //.buttonStyle(.borderless)
+                                .help("Subtract 30 minutes")
+                                
+                                // +30 min button // "➕"
+                                RepeatButton() {
+                                    offsetMinutes += 30
+                                } label: {
+                                    Image(systemName: "plus.circle") //Text("−") // or Image(systemName: "minus.circle")
+                                }
+                                //.buttonStyle(.borderless)
+                                .help("Add 30 minutes")
+                                
+                                // Now button // "🟰"
+                                RepeatButton() {
+                                    offsetMinutes = 0
+                                }
+                                label: {
+                                    Image(systemName: "arrow.counterclockwise") //Text("−") // or
+                                }
+                                //.buttonStyle(.borderless)
+                                .help("Go to now")
+                            }
+                            .opacity(hoveredRowID == "local" ? 1 : 0)
+                            .allowsHitTesting(hoveredRowID == "local")
                         }
-                        .buttonStyle(.borderless)
-                        .help("Copy to clipboard")
+                        
+                        
+                        // copy button
+                        if showCopyButtons {
+                            Button {
+                                let value = formattedDate(for: .current)
+                                copyToClipboard(value)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .imageScale(.small)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Copy to clipboard")
+                        }
                     }
+                    .contentShape(Rectangle())   // hover works over whole row
+                    .onHover { inside in
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            hoveredRowID = inside ? "local" : nil
+                        }
+                    }
+                    
                     Divider()
                 }
             }
@@ -180,10 +299,44 @@ struct ContentView: View {
                             Text(formattedDate(for: TimeZone(identifier: city.identifier) ?? .current))
                                 .font(.body)
                                 .foregroundColor(invertedLabelColor)
-                                .textSelection(.enabled)
-                                .iBeamCursorOnHover()
                             
                             Spacer()  // pushes the copy button to the right
+                            
+                            
+                            if showAdjustButtons {
+                                HStack(spacing: 4) {
+                                    // -30 min button // "➖"
+                                    RepeatButton() {
+                                        offsetMinutes -= 30
+                                    }
+                                    label: {
+                                        Image(systemName: "minus.circle") //Text("−") // or Image(systemName: "minus.circle")
+                                    }
+                                    //.buttonStyle(.borderless)
+                                    .help("Subtract 30 minutes")
+                                    
+                                    // +30 min button // "➕"
+                                    RepeatButton() {
+                                        offsetMinutes += 30
+                                    } label: {
+                                        Image(systemName: "plus.circle") //Text("−") // or Image(systemName: "minus.circle")
+                                    }
+                                    //.buttonStyle(.borderless)
+                                    .help("Add 30 minutes")
+                                    
+                                    // Now button // "🟰"
+                                    RepeatButton() {
+                                        offsetMinutes = 0
+                                    }
+                                    label: {
+                                        Image(systemName: "arrow.counterclockwise") //Text("−") // or
+                                    }
+                                    //.buttonStyle(.borderless)
+                                    .help("Go to now")
+                                }
+                                .opacity(hoveredRowID == city.id ? 1 : 0)
+                                .allowsHitTesting(hoveredRowID == city.id)
+                            }
                             
                             // copy button
                             if showCopyButtons {
@@ -198,6 +351,12 @@ struct ContentView: View {
                                 .help("Copy to clipboard")
                             }
                         }
+                        .contentShape(Rectangle())   // hover works over whole row
+                        .onHover { inside in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                hoveredRowID = inside ? city.id : nil
+                            }
+                        }
                     }
                     
                     if city.id != selectedTimeZones.last?.id {
@@ -210,6 +369,9 @@ struct ContentView: View {
             
             // settings and quit buttons
             VStack(alignment: .leading) {
+                
+                Toggle("Show Local Time", isOn: $showLocalTime)
+                
                 MenuRow(title: "Settings", shortcut: "⌘,") {
                     closeMenuBarPopover()
                     PreferencesWindowController.shared.show()
@@ -223,13 +385,19 @@ struct ContentView: View {
         .onReceive(timer) { current in
             now = current
         }
+        .onAppear {
+            clearFirstResponder()
+        }
     }
     
     private func formattedDate(for timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = dateFormat
         formatter.timeZone = timeZone
-        return formatter.string(from: now)
+        
+        let adjustedNow = now.addingTimeInterval(TimeInterval(offsetMinutes * 60))
+
+        return formatter.string(from: adjustedNow)
     }
     
     private func displayName(for identifier: String) -> String {
@@ -239,24 +407,6 @@ struct ContentView: View {
             return last.replacingOccurrences(of: "_", with: " ")
         }
         return identifier
-    }
-}
-
-private struct IBeamOnHoverModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content.onHover { inside in
-            if inside {
-                NSCursor.iBeam.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-    }
-}
-
-private extension View {
-    func iBeamCursorOnHover() -> some View {
-        modifier(IBeamOnHoverModifier())
     }
 }
 
