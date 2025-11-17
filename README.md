@@ -16,7 +16,7 @@ Learn more on why/how this was written, screenshots, and download the latest bui
 
 ## Features
 
-### Menu bar time (optional)
+### Menu bar time display
 
 - Show the current time **directly in the menu bar** instead of an icon
 - Choose **which time zone** the menu bar time should represent:
@@ -31,6 +31,13 @@ Learn more on why/how this was written, screenshots, and download the latest bui
 ### Extra time zones
 
 - Add up to **5 additional time zones** to the main Simzone popover
+- Rename each time zone with your own label
+- Reorder or remove time zones easily
+- One-click copy button
+- Optional time adjustment controls:
+  - Add 30 mins, subtract 30 mins, or reset to now
+  - Hold the (+, -) buttons to scrub time faster and faster
+  - All time zones update together
 - Each zone:
   - Shows its current time using your chosen format
   - Can be **renamed** (“New York” → “HQ”, “Tokyo” → “Dev Team”)
@@ -58,14 +65,22 @@ When the “Show time in menu bar instead of icon” toggle is **off**, Simzone 
 - Or choose **“Bring Your Own”** and paste any emoji or single character
 - A small `(i)` info button in Preferences gives tips on choosing emojis that fit well in the menu bar
 
-### Preferences, nicely organized
+### Settings
 
-The Preferences window is split into four tabs:
+Extremely configurable:
+- *Toggle visibility of:*
+  - Local time section
+  - Time differences
+  - Copy buttons
+  - Time adjustment buttons (+/−/reset)
+
+The Settings window is split into four tabs:
 
 - **Format** – Global date & time format for the app
 - **Time Zones** – Add, rename, reorder, and remove extra time zones
-- **Menu Bar** – Control menu bar time vs icon, label, emoji, and format
+- **Menu Bar** – Control menu bar time vs icon, label, emoji, local time section, show buttons, overridea-ability of text, format and time adjustment buttons
 - **About** – Version info, a short description, and the license
+
 
 ---
 
@@ -105,18 +120,35 @@ Once running:
 
 ## Configuration Details
 
-Simzone stores its settings using `@AppStorage` (UserDefaults), including:
+Simzone stores all preferences using `@AppStorage` (backed by UserDefaults).  
+Settings are grouped into the following categories:
 
-- `simzoneDateFormat` – main display format
-- `simzoneLocation1...simzoneLocation5` – selected time zone identifiers
-- `simzoneLocation1Name...simzoneLocation5Name` – custom display names
-- `simzoneShowTimeInMenuBar` – toggle for time vs icon in the menu bar
-- `simzoneMenuBarShortName` – short label shown before the menu bar time
-- `simzoneMenuBarTimeZoneId` – which time zone the menu bar time tracks
-- `simzoneMenuBarFormat` – compact time format for the menu bar
-- `simzoneMenuBarEmoji` – emoji/text shown when time is hidden
+### Date & Time Formatting
+- `simzoneDateFormat` — main time/date display format  
+- `simzoneShowTimeDifferences` — show or hide “+3 hrs” style offsets  
+- `simzoneShowCopyButtons` — enable or disable per-row copy buttons  
+- `simzoneShowAdjustButtons` — enable or disable the + / − / reset scrub controls  
 
-Everything is stored locally and can be reset by deleting the app’s preferences if needed.
+### Local Time
+- `simzoneShowLocalTime` — show or hide the local time section  
+- `simzoneLocalTimeLabel` — customizable label for the local time row  
+
+### Added Time Zones
+- `simzoneLocation1…simzoneLocation5` — selected time zone identifiers  
+- `simzoneLocation1Name…simzoneLocation5Name` — optional custom names  
+- These values determine the order, naming, and number of time zones shown in the popover.
+
+### Menu Bar Settings
+- `simzoneShowTimeInMenuBar` — show actual time instead of an emoji icon  
+- `simzoneMenuBarTimeZoneId` — which time zone the menu bar clock uses  
+- `simzoneMenuBarFormat` — compact time format for the menu bar  
+- `simzoneMenuBarShortName` — optional 1–5 character prefix label  
+- `simzoneMenuBarEmoji` — emoji/icon shown when the time is hidden  
+
+---
+
+All settings are stored locally using standard macOS preferences.  
+To reset Simzone completely, delete its UserDefaults entry using `defaults delete` or remove the app’s preferences file.
 
 ---
 
@@ -130,8 +162,7 @@ Everything is stored locally and can be reset by deleting the app’s preference
 
 ## Donations
 
-Simzone is free and configurable.  
-If you find it useful and feel like giving back, please consider donating to:
+Simzone is free and configurable. If you find it useful and feel like giving back, please consider donating to:
 
 **[oneTreePlanted.org](https://oneTreePlanted.org)**
 
