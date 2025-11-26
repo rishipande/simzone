@@ -148,7 +148,7 @@ struct ContentView: View {
                 }
                 // press & hold = start repeating
                 .onLongPressGesture(
-                    minimumDuration: 0.2,      // 👈 correct label
+                    minimumDuration: 0.2,
                     maximumDistance: 10,
                     pressing: { isPressing in
                         if isPressing {
@@ -164,29 +164,37 @@ struct ContentView: View {
         }
 
         private func startRepeating() {
-            // fire once immediately on hold
-            action()
             startDate = Date()
-
+            
             timer?.invalidate()
             timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
                 let elapsed = Date().timeIntervalSince(startDate ?? Date())
                 let multiplier: Int
-
+                
                 switch elapsed {
-                case 0..<1:
-                    multiplier = 1      // first second: 1x
-                case 1..<2:
-                    multiplier = 2      // next second: 2x
+                case 0..<4:
+                    multiplier = 1      // first four seconds: 1x
+                case 4..<8:
+                    multiplier = 2      // next four seconds: 2x
+                case 8..<12:
+                    multiplier = 32      // after 8 seconds: 4x
+                case 12..<16:
+                    multiplier = 128      // after 12 seconds: 32x
+                case 16..<20:
+                    multiplier = 512     // after 16 seconds: 64x
+                case 20..<24:
+                    multiplier = 1024    // after 20 seconds: 128x
                 default:
-                    multiplier = 4      // after 2s: 4x
+                    multiplier = 1024     // after 24s: 128x
                 }
-
+                
                 for _ in 0..<multiplier {
                     action()
                 }
             }
-            RunLoop.main.add(timer!, forMode: .common)
+            if let timer {
+                RunLoop.main.add(timer, forMode: .common)
+            }
         }
 
         private func stopRepeating() {
@@ -195,6 +203,33 @@ struct ContentView: View {
             startDate = nil
         }
     }
+    
+    struct CloseShortcutsHandler: View {
+        let action: () -> Void
+
+        var body: some View {
+            Group {
+                // ESC key
+                Button(action: action) {
+                    EmptyView()
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                .frame(width: 0, height: 0)
+                .opacity(0.001)
+                .buttonStyle(.borderless)
+
+                // ⌘W
+                Button(action: action) {
+                    EmptyView()
+                }
+                .keyboardShortcut("w", modifiers: [.command])
+                .frame(width: 0, height: 0)
+                .opacity(0.001)
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -223,7 +258,7 @@ struct ContentView: View {
                                     Image(systemName: "minus.circle") //Text("−") // or Image(systemName: "minus.circle")
                                 }
                                 //.buttonStyle(.borderless)
-                                .help("Subtract 30 minutes")
+                                .help("Subtract 30 minutes / Keep pressing and every 4s the speed will increase")
                                 
                                 // +30 min button // "➕"
                                 RepeatButton() {
@@ -232,7 +267,7 @@ struct ContentView: View {
                                     Image(systemName: "plus.circle") //Text("−") // or Image(systemName: "minus.circle")
                                 }
                                 //.buttonStyle(.borderless)
-                                .help("Add 30 minutes")
+                                .help("Add 30 minutes / Keep pressing and every 4s the speed will increase")
                                 
                                 // Now button // "🟰"
                                 RepeatButton() {
@@ -388,6 +423,11 @@ struct ContentView: View {
         .onAppear {
             clearFirstResponder()
         }
+        .background(
+            CloseShortcutsHandler {
+                closeMenuBarPopover()
+            }
+        )
     }
     
     private func formattedDate(for timeZone: TimeZone) -> String {
